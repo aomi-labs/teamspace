@@ -1,9 +1,12 @@
 This is the teamspace of Aomi Labs as a drop-in repacement of Notion.
 
-### Resources
+## Resources
 [Important prerequisit](resources/RESOURCES.md)
 
-Personal notes should sync to `resources/your-name`
+Personal notes should sync to `/resources/your-name`
+
+## Meeting
+Meeting are downloaded from https://drive.google.com/drive/folders/1K7jAgdyeR6vuDblTZvSFeOz4xEN_mAzq to `/meetings`
 
 ### Daily Updates
 
@@ -27,7 +30,16 @@ We use an automated system to capture and sync daily progress from development s
    This creates `.specstory/history/` files that capture your Claude Code sessions automatically.
 
 #### Daily Summary Workflow
-1. **Work with Claude Code** throughout your day - all sessions are automatically tracked
+1. **Work with Claude Code** with [this](./.claude) example setup:
+    ```bash
+    .
+    ├── .claude
+        ├── commands
+        │   └── sync-today.md
+        └── scripts
+            └── sync.sh
+    ```
+    Make sure `TEAMSPACE_DIR` and `REPO_ROOT` is your local teamspace dir.
 2. **Run the sync command** at end of day:
    ```bash
    /sync-today
