@@ -29,8 +29,7 @@ We use an automated system to capture and sync daily progress from development s
    ```
    This creates `.specstory/history/` files that capture your Claude Code sessions automatically.
 
-### Daily Updates
-1. **Work with Claude Code** with [this](./.claude) example setup:
+3. **Work with Claude Code** with [this](./.claude) example setup:
     ```bash
     .
     ├── .claude
@@ -40,7 +39,7 @@ We use an automated system to capture and sync daily progress from development s
             └── sync.sh
     ```
     Make sure `TEAMSPACE_DIR` and `REPO_ROOT` is your local teamspace dir.
-2. **Run the sync command** at end of day:
+4. **Run the sync command** at end of day:
    ```bash
    /sync-today
    ```
