@@ -29,7 +29,7 @@ We use an automated system to capture and sync daily progress from development s
    ```
    This creates `.specstory/history/` files that capture your Claude Code sessions automatically.
 
-#### Daily Summary Workflow
+### Daily Updates
 1. **Work with Claude Code** with [this](./.claude) example setup:
     ```bash
     .
