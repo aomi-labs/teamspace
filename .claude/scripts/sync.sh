@@ -3,34 +3,30 @@ set -euo pipefail
 
 # This script reads a summary from a specific file and copies it to the teamspace directory
 
-TEAMSPACE_DIR="/Users/ceciliazhang/Code/aomi-teamspace/updates/cecilia"
-REPO_ROOT="/Users/ceciliazhang/Code/aomi-teamspace"
-SOURCE_DIR="/Users/ceciliazhang/Code/forge-mcp.worktrees/sessioned-frontend/.claude/history"
-DATE="$(date +%F)"                             # e.g., 2025-09-22
-SOURCE_FILE="${SOURCE_DIR}/${DATE}-summary.md"
-OUTFILE="${TEAMSPACE_DIR}/${DATE}.md"
+# Function to sync a specific date
+sync_date() {
+    local DATE=$1
+    local SOURCE_FILE="${SOURCE_DIR}/${DATE}-summary.md"
+    local OUTFILE="${TEAMSPACE_DIR}/${DATE}.md"
 
-mkdir -p "$TEAMSPACE_DIR"
+    echo "Processing date: $DATE"
 
-# Check if source file exists
-if [ ! -f "$SOURCE_FILE" ]; then
-  echo "Error: Source file does not exist: $SOURCE_FILE" >&2
-  exit 1
-fi
+    # Check if source file exists
+    if [ ! -f "$SOURCE_FILE" ]; then
+        echo "Warning: Source file does not exist: $SOURCE_FILE" >&2
+        return
+    fi
 
-# Get today's git activity from the source repository
-cd "/Users/ceciliazhang/Code/forge-mcp.worktrees/sessioned-frontend"
+    # Get git activity from the source repository for this date
+    cd "/Users/ceciliazhang/Code/forge-mcp.worktrees/sessioned-frontend"
 
-# Get today's date in git format
-TODAY_DATE=$(date +%Y-%m-%d)
-
-# Collect git activity information
-GIT_ACTIVITY=$(cat <<EOF
+    # Collect git activity information
+    GIT_ACTIVITY=$(cat <<EOF
 
 ## Repository Activities & Active Branches
 
-### Today's Commits ($TODAY_DATE)
-$(git log --oneline --since="$TODAY_DATE 00:00:00" --until="$TODAY_DATE 23:59:59" --all --pretty=format:"- %h %s (%an, %ar)" 2>/dev/null || echo "No commits found for today")
+### Commits ($DATE)
+$(git log --oneline --since="$DATE 00:00:00" --until="$DATE 23:59:59" --all --pretty=format:"- %h %s (%an, %ar)" 2>/dev/null || echo "No commits found for $DATE")
 
 ### Branches Worked On
 $(git for-each-ref --format='- %(refname:short) (last commit: %(committerdate:relative))' refs/heads/ 2>/dev/null | head -10)
@@ -42,25 +38,74 @@ $(git for-each-ref --format='- %(refname:short) (last commit: %(committerdate:re
 EOF
 )
 
-# Copy the original summary and append git activity
-cp "$SOURCE_FILE" "$OUTFILE"
-echo "$GIT_ACTIVITY" >> "$OUTFILE"
+    # Copy the original summary and append git activity
+    cp "$SOURCE_FILE" "$OUTFILE"
+    echo "$GIT_ACTIVITY" >> "$OUTFILE"
 
-cd "$REPO_ROOT"
+    cd "$REPO_ROOT"
+
+    # Stage the updated file
+    git add "$OUTFILE"
+
+    echo "Synced: $OUTFILE"
+}
+
+# Parse arguments
+SINCE_DATE=""
+TARGET_DATE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --since)
+            SINCE_DATE="$2"
+            shift 2
+            ;;
+        *)
+            TARGET_DATE="$1"
+            shift
+            ;;
+    esac
+done
+
+TEAMSPACE_DIR="/Users/ceciliazhang/Code/aomi-teamspace/updates/cecilia"
+REPO_ROOT="/Users/ceciliazhang/Code/aomi-teamspace"
+SOURCE_DIR="/Users/ceciliazhang/Code/forge-mcp.worktrees/sessioned-frontend/.claude/history"
+
+mkdir -p "$TEAMSPACE_DIR"
 
 # Pull latest changes from main branch
+cd "$REPO_ROOT"
 git pull origin main
 
-# Stage the updated file
-git add "$OUTFILE"
+# If --since flag is provided, loop through dates
+if [ -n "$SINCE_DATE" ]; then
+    END_DATE=$(date +%Y-%m-%d)
+
+    echo "Syncing files from $SINCE_DATE to $END_DATE"
+    echo "==="
+
+    CURRENT_DATE="$SINCE_DATE"
+    while [ "$CURRENT_DATE" != "$(date -j -v+1d -f '%Y-%m-%d' "$END_DATE" '+%Y-%m-%d' 2>/dev/null)" ]; do
+        sync_date "$CURRENT_DATE"
+        CURRENT_DATE=$(date -j -v+1d -f '%Y-%m-%d' "$CURRENT_DATE" '+%Y-%m-%d' 2>/dev/null)
+    done
+elif [ -n "$TARGET_DATE" ]; then
+    # Single date provided
+    sync_date "$TARGET_DATE"
+else
+    # Use today's date
+    DATE=$(date +%F)
+    sync_date "$DATE"
+fi
 
 # Commit if there are staged changes
 if ! git diff --cached --quiet; then
-  git commit -m "update: daily summary for ${DATE} by cecilia"
-  git push origin main
+    COMMIT_DATE="${TARGET_DATE:-${SINCE_DATE:-$(date +%F)}}"
+    git commit -m "update: daily summary for ${COMMIT_DATE} by cecilia"
+    git push origin main
 else
-  echo "No changes to commit. Skipping push."
+    echo "No changes to commit. Skipping push."
 fi
 
-echo "Synced to: $OUTFILE"
+echo "Done!"
 
